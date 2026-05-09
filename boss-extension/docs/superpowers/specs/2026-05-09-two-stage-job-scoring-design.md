@@ -1376,17 +1376,17 @@ test('load should return null for expired cache', async () => {
 ### 实现优先级
 
 **阶段1（核心功能）**:
-- [x] JobMatcher.matchPreliminary() 实现
-- [x] JobScoreCache 模块实现
-- [x] 列表页初步评分和缓存
-- [x] 详情页精确评分流程
-- [x] UI组件实现
+- [ ] JobMatcher.matchPreliminary() 实现
+- [ ] JobScoreCache 模块实现
+- [ ] 列表页初步评分和缓存
+- [ ] 详情页精确评分流程
+- [ ] UI组件实现
 
 **阶段2（优化和错误处理）**:
-- [x] 错误处理完善
-- [x] 边界情况处理
-- [x] 性能优化
-- [x] 样式美化
+- [ ] 错误处理完善
+- [ ] 边界情况处理
+- [ ] 性能优化
+- [ ] 样式美化
 
 **阶段3（测试和文档）**:
 - [ ] 单元测试
