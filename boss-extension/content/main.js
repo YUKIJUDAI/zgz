@@ -71,21 +71,38 @@
     const url = window.location.href;
     const pathname = window.location.pathname;
 
-    if (url.includes('/web/geek/job')) {
-      currentPage = 'job-list';
-      BossUtils.log('info', '当前页面: 职位列表');
-      handleJobListPage();
-    } else if (url.includes('/job_detail/')) {
+    console.log('[页面检测] URL:', url);
+    console.log('[页面检测] Pathname:', pathname);
+
+    // 职位详情页（多种URL格式）
+    if (url.includes('/job_detail/') ||
+        pathname.includes('/job_detail/') ||
+        pathname.match(/\/job[_-]detail\//i) ||
+        (pathname.includes('/geek/job') && pathname.split('/').length > 4)) {
       currentPage = 'job-detail';
+      console.log('[页面检测] ✓ 识别为职位详情页');
       BossUtils.log('info', '当前页面: 职位详情');
       handleJobDetailPage();
-    } else if (url.includes('/web/geek/chat')) {
+    }
+    // 职位列表页
+    else if (url.includes('/web/geek/job') && !pathname.includes('/job_detail/')) {
+      currentPage = 'job-list';
+      console.log('[页面检测] ✓ 识别为职位列表页');
+      BossUtils.log('info', '当前页面: 职位列表');
+      handleJobListPage();
+    }
+    // 聊天页面
+    else if (url.includes('/web/geek/chat')) {
       currentPage = 'chat';
+      console.log('[页面检测] ✓ 识别为聊天页面');
       BossUtils.log('info', '当前页面: 聊天页面');
       handleChatPage();
-    } else {
+    }
+    // 未识别
+    else {
       currentPage = 'unknown';
-      BossUtils.log('debug', '未识别的页面类型');
+      console.log('[页面检测] ⚠ 未识别的页面类型');
+      BossUtils.log('debug', '未识别的页面类型: ' + pathname);
     }
   }
 
@@ -359,10 +376,12 @@
    * 处理职位详情页（渐进式评分）
    */
   async function handleJobDetailPage() {
+    console.log('[详情页] ========== 开始处理职位详情页 ==========');
+    console.log('[详情页] URL:', window.location.href);
     BossUtils.log('info', '开始处理职位详情页（渐进式评分）');
 
     const jobId = extractJobIdFromURL();
-    console.log('[详情页] 职位ID:', jobId);
+    console.log('[详情页] 提取的职位ID:', jobId);
 
     // 步骤1: 检查缓存
     const cachedScore = await JobScoreCache.load(jobId);
@@ -765,17 +784,53 @@
    */
   function extractJobDetail() {
     try {
-      return {
+      console.log('[提取详情] 开始提取职位信息...');
+
+      // 尝试多个选择器提取职位描述
+      const descSelectors = [
+        '.job-sec-text',
+        '.job-detail-section',
+        '.job-description',
+        '.text-description',
+        '[class*="job-detail"]',
+        '[class*="description"]'
+      ];
+
+      let description = '';
+      for (const selector of descSelectors) {
+        const element = document.querySelector(selector);
+        if (element && element.textContent.trim().length > 50) {
+          description = element.textContent.trim();
+          console.log(`[提取详情] ✓ 使用选择器 "${selector}" 提取描述，长度: ${description.length}`);
+          break;
+        }
+      }
+
+      if (!description) {
+        console.warn('[提取详情] ⚠ 未找到职位描述，尝试的选择器:', descSelectors);
+      }
+
+      const jobInfo = {
         id: window.location.pathname.split('/').pop() || Math.random().toString(36),
-        title: document.querySelector('.job-title, .name, h1.job-name')?.textContent.trim() || '',
-        company: document.querySelector('.company-name, .name')?.textContent.trim() || '',
-        salary: document.querySelector('.salary, .job-salary')?.textContent.trim() || '',
-        location: document.querySelector('.job-location, .location-address')?.textContent.trim() || '',
-        tags: Array.from(document.querySelectorAll('.tag-list li, .job-tags span')).map(t => t.textContent.trim()),
-        description: document.querySelector('.job-sec-text, .job-detail-section, .job-description')?.textContent.trim() || '',
-        experience: document.querySelector('.job-experience')?.textContent.trim() || '',
+        title: document.querySelector('.job-title, .name, h1.job-name, [class*="job-title"]')?.textContent.trim() || '',
+        company: document.querySelector('.company-name, .name, [class*="company-name"]')?.textContent.trim() || '',
+        salary: document.querySelector('.salary, .job-salary, [class*="salary"]')?.textContent.trim() || '',
+        location: document.querySelector('.job-location, .location-address, [class*="location"]')?.textContent.trim() || '',
+        tags: Array.from(document.querySelectorAll('.tag-list li, .job-tags span, [class*="tag"] span')).map(t => t.textContent.trim()),
+        description: description,
+        experience: document.querySelector('.job-experience, [class*="experience"]')?.textContent.trim() || '',
       };
+
+      console.log('[提取详情] 提取结果:', {
+        标题: jobInfo.title,
+        公司: jobInfo.company,
+        描述长度: jobInfo.description.length,
+        标签数量: jobInfo.tags.length
+      });
+
+      return jobInfo;
     } catch (error) {
+      console.error('[提取详情] 提取失败:', error);
       BossUtils.log('error', '提取职位详情失败', error.message);
       return null;
     }
@@ -785,9 +840,37 @@
    * 从URL提取职位ID
    */
   function extractJobIdFromURL() {
-    // Boss直聘详情页URL格式: /job_detail/xxxxx.html
-    const match = window.location.pathname.match(/job_detail\/([^.]+)/);
-    return match ? match[1] : Math.random().toString(36).substr(2, 9);
+    const pathname = window.location.pathname;
+    console.log('[提取ID] Pathname:', pathname);
+
+    // Boss直聘详情页URL格式可能有多种:
+    // 1. /job_detail/xxxxx.html
+    // 2. /web/geek/job/xxxxx
+    // 3. /job-detail/xxxxx
+
+    let match;
+
+    // 尝试匹配 job_detail/xxxxx
+    match = pathname.match(/job[_-]detail\/([^./?]+)/i);
+    if (match) {
+      console.log('[提取ID] 匹配格式1:', match[1]);
+      return match[1];
+    }
+
+    // 尝试匹配 /web/geek/job/xxxxx
+    match = pathname.match(/\/web\/geek\/job\/([^/?]+)/);
+    if (match) {
+      console.log('[提取ID] 匹配格式2:', match[1]);
+      return match[1];
+    }
+
+    // 提取URL最后一段作为ID
+    const segments = pathname.split('/').filter(s => s);
+    const lastSegment = segments[segments.length - 1];
+    const idFromSegment = lastSegment.replace(/\.html?$/, '');
+
+    console.log('[提取ID] 使用最后一段:', idFromSegment);
+    return idFromSegment || Math.random().toString(36).substr(2, 9);
   }
 
   /**
