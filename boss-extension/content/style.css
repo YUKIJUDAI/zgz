@@ -1,0 +1,332 @@
+/**
+ * Boss直聘求职助手 - 页面注入样式
+ */
+
+/* 匹配度标签 */
+.boss-assistant-badge {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  animation: boss-badge-fade-in 0.3s ease;
+}
+
+@keyframes boss-badge-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 匹配度分数面板 */
+.boss-assistant-score-panel {
+  animation: boss-panel-slide-in 0.4s ease;
+}
+
+@keyframes boss-panel-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 一键打招呼按钮 */
+.boss-assistant-quick-greet {
+  animation: boss-button-bounce 0.5s ease;
+}
+
+@keyframes boss-button-bounce {
+  0% {
+    opacity: 0;
+    transform: translateY(100px) scale(0.8);
+  }
+  50% {
+    transform: translateY(-10px) scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 控制面板 */
+#boss-assistant-panel {
+  transition: all 0.3s ease;
+}
+
+#boss-assistant-panel:hover {
+  box-shadow: -4px 0 15px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Toast通知样式（已在utils.js中定义，这里添加辅助样式） */
+.boss-toast {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  backdrop-filter: blur(10px);
+}
+
+/* 高亮职位卡片 */
+.job-card-wrapper.boss-highlighted,
+.job-card-box.boss-highlighted,
+li.job-card.boss-highlighted {
+  animation: boss-highlight-pulse 2s ease infinite;
+}
+
+@keyframes boss-highlight-pulse {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(82, 196, 26, 0.3);
+  }
+  50% {
+    box-shadow: 0 4px 16px rgba(82, 196, 26, 0.5);
+  }
+}
+
+/* 加载动画 */
+.boss-assistant-loading {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: boss-spin 0.8s linear infinite;
+}
+
+@keyframes boss-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 成功图标动画 */
+.boss-assistant-success {
+  animation: boss-success-bounce 0.6s ease;
+}
+
+@keyframes boss-success-bounce {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 错误图标动画 */
+.boss-assistant-error {
+  animation: boss-error-shake 0.5s ease;
+}
+
+@keyframes boss-error-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-10px);
+  }
+  75% {
+    transform: translateX(10px);
+  }
+}
+
+/* 统计卡片 */
+.boss-assistant-stat-card {
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.boss-assistant-stat-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+/* 进度条 */
+.boss-assistant-progress {
+  width: 100%;
+  height: 4px;
+  background: #f0f0f0;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.boss-assistant-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #1890ff 0%, #52c41a 100%);
+  transition: width 0.3s ease;
+  animation: boss-progress-flow 2s ease infinite;
+}
+
+@keyframes boss-progress-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* 技能标签 */
+.boss-assistant-skill-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  margin: 4px;
+  background: #f0f5ff;
+  color: #1890ff;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.boss-assistant-skill-tag:hover {
+  background: #1890ff;
+  color: white;
+  transform: scale(1.05);
+}
+
+/* 匹配详情列表 */
+.boss-assistant-match-detail {
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.2s ease;
+}
+
+.boss-assistant-match-detail:hover {
+  background: #fafafa;
+}
+
+/* 按钮组 */
+.boss-assistant-button-group {
+  display: flex;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.boss-assistant-button {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.boss-assistant-button-primary {
+  background: #1890ff;
+  color: white;
+}
+
+.boss-assistant-button-primary:hover {
+  background: #40a9ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+}
+
+.boss-assistant-button-success {
+  background: #52c41a;
+  color: white;
+}
+
+.boss-assistant-button-success:hover {
+  background: #73d13d;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(82, 196, 26, 0.3);
+}
+
+.boss-assistant-button-default {
+  background: white;
+  color: #333;
+  border: 1px solid #d9d9d9;
+}
+
+.boss-assistant-button-default:hover {
+  color: #1890ff;
+  border-color: #1890ff;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .boss-assistant-score-panel > div {
+    right: 10px !important;
+    min-width: 200px !important;
+    padding: 15px !important;
+  }
+
+  .boss-assistant-quick-greet {
+    bottom: 20px !important;
+    right: 20px !important;
+    padding: 12px 20px !important;
+    font-size: 14px !important;
+  }
+
+  #boss-assistant-panel {
+    top: 60% !important;
+  }
+}
+
+/* 暗色模式支持 */
+@media (prefers-color-scheme: dark) {
+  .boss-assistant-score-panel > div {
+    background: #1f1f1f !important;
+    color: #e0e0e0 !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+  }
+
+  .boss-assistant-stat-card {
+    background: #1f1f1f;
+    color: #e0e0e0;
+  }
+
+  .boss-assistant-match-detail:hover {
+    background: #2a2a2a;
+  }
+
+  .boss-assistant-skill-tag {
+    background: #1f3a5f;
+    color: #69b1ff;
+  }
+
+  .boss-assistant-skill-tag:hover {
+    background: #1890ff;
+    color: white;
+  }
+}
+
+/* 无障碍辅助 */
+.boss-assistant-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* 打印样式 */
+@media print {
+  .boss-assistant-badge,
+  .boss-assistant-score-panel,
+  .boss-assistant-quick-greet,
+  #boss-assistant-panel,
+  .boss-toast {
+    display: none !important;
+  }
+}

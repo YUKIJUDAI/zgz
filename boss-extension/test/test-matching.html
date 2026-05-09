@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Job Matching Engine Test</title>
+  <style>
+    body { font-family: monospace; padding: 20px; }
+    .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+    .pass { color: green; }
+    .fail { color: red; }
+    button { margin: 5px; padding: 8px 15px; }
+    pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>Job Matching Engine Test Suite</h1>
+
+  <div class="test-section">
+    <h2>AI Service Tests</h2>
+    <button onclick="testAIServiceInit()">Test: Initialize</button>
+    <button onclick="testAIServiceCache()">Test: Cache</button>
+    <button onclick="testAIServiceRateLimit()">Test: Rate Limit</button>
+    <button onclick="testAIServiceCall()">Test: API Call</button>
+    <div id="ai-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Distance Evaluator Tests</h2>
+    <button onclick="testDistanceInit()">Test: Initialize</button>
+    <button onclick="testRegionEval()">Test: Region Evaluation</button>
+    <button onclick="testMapAPIGeocode()">Test: Map API Geocode</button>
+    <button onclick="testMapAPIDistance()">Test: Map API Distance</button>
+    <button onclick="testHybridEval()">Test: Hybrid Evaluation</button>
+    <div id="distance-results"></div>
+  </div>
+
+  <script src="../lib/utils.js"></script>
+  <script src="../lib/ai-service.js"></script>
+  <script src="test-ai-service.js"></script>
+  <script src="../lib/distance-evaluator.js"></script>
+  <script src="test-distance.js"></script>
+</body>
+</html>

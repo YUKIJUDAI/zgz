@@ -1,0 +1,14 @@
+---
+description: 面试评分器应用文件的编辑规则
+globs: main/{index.html,server.ts,package.json}
+alwaysApply: false
+---
+
+# 面试评分器文件规则
+
+- 在 `main/index.html` 中，默认保持单文件自包含，除非用户明确要求拆分文件。
+- 新增或修改题目时，保持题目对象结构一致：`id`、`category`、`title`、`tags`、`placeholder`、`reference`、`points`、`lengthHint`。
+- 评分逻辑要保持可解释、可预测，不要默认引入隐藏规则、远程服务或黑盒评分。
+- 在 `main/server.ts` 中，保持服务简单、本地优先、零依赖，除非用户明确要求扩展。
+- 在 `main/package.json` 中，优先保持最小脚本集合，不要随意增加依赖。
+- 做了实质性修改后，要验证 `main/index.html` 仍然能被正常访问，且答题、提交、出分主流程仍然可用。

@@ -1,0 +1,13 @@
+---
+description: 修改 aicode-frontend-interview 题库文档时，同步更新 HTML 题库
+globs: aicode-frontend-interview*.md
+alwaysApply: false
+---
+
+# 题库同步规则
+
+- `aicode-frontend-interview*.md` 是这个项目的题库来源文档。
+- 当这些 Markdown 文件中的题目、分类、回答建议或回答示例发生实质性变更时，后续修改必须同步检查 `main/index.html` 里的题库数据是否也需要更新。
+- 如果 Markdown 题库新增了重要题型、分类或问答方向，默认应该把对应内容同步到 HTML 练习器中，而不是只改文档不改页面。
+- 同步时优先保持 HTML 题库的数据结构不变，只更新题目内容、分类、提示语、参考要点和评分点。
+- 如果本次只改了文案措辞、排版或纯说明性内容，不一定需要同步 HTML，但要先判断是否影响练习器中的题库质量。

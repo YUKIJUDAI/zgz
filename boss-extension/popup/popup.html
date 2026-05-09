@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Boss求职助手</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- 头部 -->
+    <header class="header">
+      <div class="header-title">
+        <h1>Boss求职助手</h1>
+        <span class="version">v1.0.0</span>
+      </div>
+      <div class="header-controls">
+        <label class="switch">
+          <input type="checkbox" id="enableSwitch">
+          <span class="slider"></span>
+        </label>
+      </div>
+    </header>
+
+    <!-- 标签页 -->
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="dashboard">仪表盘</button>
+      <button class="tab-btn" data-tab="config">配置</button>
+      <button class="tab-btn" data-tab="logs">日志</button>
+    </nav>
+
+    <!-- 仪表盘页面 -->
+    <div class="tab-content active" id="dashboard">
+      <!-- 统计卡片 -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">📊</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statGreeted">0</div>
+            <div class="stat-label">今日打招呼</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">💼</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statProcessed">0</div>
+            <div class="stat-label">今日处理职位</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">✅</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statMatched">0</div>
+            <div class="stat-label">匹配职位</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 快捷操作 -->
+      <div class="quick-actions">
+        <h3>快捷操作</h3>
+        <button class="btn btn-primary" id="btnAutoGreet">
+          <span class="btn-icon">🤖</span>
+          开始自动打招呼
+        </button>
+        <button class="btn btn-secondary" id="btnOpenBoss">
+          <span class="btn-icon">🔗</span>
+          打开Boss直聘
+        </button>
+        <button class="btn btn-secondary" id="btnRefresh">
+          <span class="btn-icon">🔄</span>
+          刷新统计
+        </button>
+      </div>
+
+      <!-- 最近日志 -->
+      <div class="recent-logs">
+        <h3>最近活动</h3>
+        <div id="recentLogsList" class="log-list">
+          <div class="empty-state">暂无活动记录</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 配置页面 -->
+    <div class="tab-content" id="config">
+      <div class="config-section">
+        <h3>基本设置</h3>
+
+        <div class="form-group">
+          <label>期望薪资（最低，单位：元）</label>
+          <input type="number" id="salaryMin" placeholder="例如: 25000">
+        </div>
+
+        <div class="form-group">
+          <label>必备技能（逗号分隔）</label>
+          <input type="text" id="requiredSkills" placeholder="例如: Vue,TypeScript,JavaScript">
+        </div>
+
+        <div class="form-group">
+          <label>加分技能（逗号分隔）</label>
+          <input type="text" id="bonusSkills" placeholder="例如: React,Node.js,Webpack">
+        </div>
+
+        <div class="form-group">
+          <label>排除关键词（逗号分隔）</label>
+          <input type="text" id="excludedKeywords" placeholder="例如: 外包,驻场,996">
+        </div>
+
+        <div class="form-group">
+          <label>匹配阈值（60-100分）</label>
+          <input type="number" id="matchThreshold" min="60" max="100" placeholder="60">
+        </div>
+      </div>
+
+      <div class="config-section">
+        <h3>打招呼设置</h3>
+
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="greetingEnabled">
+            启用自动打招呼
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label>每日上限（次数）</label>
+          <input type="number" id="dailyLimit" min="1" max="100" placeholder="30">
+        </div>
+
+        <div class="form-group">
+          <label>自定义开场白（可选）</label>
+          <textarea id="customIntro" rows="4" placeholder="留空则使用智能生成的开场白"></textarea>
+        </div>
+      </div>
+
+      <div class="config-section">
+        <h3>个人资料</h3>
+
+        <div class="form-group">
+          <label>姓名</label>
+          <input type="text" id="profileName" placeholder="金超宇">
+        </div>
+
+        <div class="form-group">
+          <label>工作年限</label>
+          <input type="number" id="profileYears" placeholder="9">
+        </div>
+
+        <div class="form-group">
+          <label>技术栈</label>
+          <input type="text" id="profileTechStack" placeholder="Vue3/TypeScript/JavaScript">
+        </div>
+
+        <div class="form-group">
+          <label>联系电话</label>
+          <input type="text" id="profilePhone" placeholder="18557519506">
+        </div>
+
+        <div class="form-group">
+          <label>期望薪资范围</label>
+          <input type="text" id="profileSalary" placeholder="25-35">
+        </div>
+      </div>
+
+      <div class="config-section">
+        <h3>通知设置</h3>
+
+        <div class="form-group">
+          <label>企业微信Webhook</label>
+          <input type="text" id="wechatWebhook" placeholder="https://qyapi.weixin.qq.com/...">
+        </div>
+
+        <div class="form-group">
+          <label>Server酱密钥</label>
+          <input type="text" id="serverChanKey" placeholder="SCT...">
+        </div>
+
+        <div class="form-group">
+          <label>Bark密钥</label>
+          <input type="text" id="barkKey" placeholder="your-bark-key">
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary btn-block" id="btnSaveConfig">
+          <span class="btn-icon">💾</span>
+          保存配置
+        </button>
+        <button class="btn btn-secondary btn-block" id="btnResetConfig">
+          <span class="btn-icon">🔄</span>
+          恢复默认
+        </button>
+      </div>
+    </div>
+
+    <!-- 日志页面 -->
+    <div class="tab-content" id="logs">
+      <div class="logs-controls">
+        <button class="btn btn-secondary btn-sm" id="btnClearLogs">清空日志</button>
+        <button class="btn btn-secondary btn-sm" id="btnExportLogs">导出日志</button>
+      </div>
+
+      <div class="log-filters">
+        <select id="logLevelFilter">
+          <option value="all">全部级别</option>
+          <option value="info">信息</option>
+          <option value="warn">警告</option>
+          <option value="error">错误</option>
+        </select>
+      </div>
+
+      <div id="logsList" class="log-list detailed">
+        <div class="empty-state">暂无日志</div>
+      </div>
+    </div>
+
+    <!-- 底部 -->
+    <footer class="footer">
+      <p>Made with ❤️ by 金超宇</p>
+      <p class="footer-links">
+        <a href="https://github.com/YUKIJUDAI" target="_blank">GitHub</a>
+        <span>·</span>
+        <a href="#" id="linkHelp">帮助文档</a>
+      </p>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
