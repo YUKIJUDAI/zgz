@@ -7,12 +7,29 @@ let isInitializing = true;  // 防止初始化时触发change事件保存
 
 // 页面加载完成
 document.addEventListener('DOMContentLoaded', async () => {
-  await loadConfig();
-  await loadStats();
-  initEventListeners();
-  initTabSwitching();
-  // 初始化完成后，允许保存配置
-  setTimeout(() => { isInitializing = false; }, 100);
+  console.log('[Popup] DOMContentLoaded 触发');
+
+  try {
+    await loadConfig();
+    console.log('[Popup] 配置加载完成');
+
+    await loadStats();
+    console.log('[Popup] 统计加载完成');
+
+    initEventListeners();
+    console.log('[Popup] 事件监听器初始化完成');
+
+    initTabSwitching();
+    console.log('[Popup] 标签切换初始化完成');
+
+    // 初始化完成后，允许保存配置
+    setTimeout(() => {
+      isInitializing = false;
+      console.log('[Popup] ✓ Popup 初始化完成');
+    }, 100);
+  } catch (error) {
+    console.error('[Popup] ✗ 初始化失败:', error);
+  }
 });
 
 /**
@@ -136,86 +153,140 @@ async function loadStats() {
  * 初始化事件监听
  */
 function initEventListeners() {
+  console.log('[Popup] 开始绑定事件监听器...');
+
   // 启用/禁用开关
-  document.getElementById('enableSwitch').addEventListener('change', async (e) => {
-    if (isInitializing) return;  // 初始化阶段不保存
-    config.enabled = e.target.checked;
-    await chrome.storage.local.set({ bossConfig: config });
-    showToast(config.enabled ? '助手已启用' : '助手已禁用', 'info');
-  });
+  const enableSwitch = document.getElementById('enableSwitch');
+  console.log('[Popup] enableSwitch 元素:', enableSwitch);
+  if (enableSwitch) {
+    enableSwitch.addEventListener('change', async (e) => {
+      console.log('[Popup] enableSwitch 点击', e.target.checked);
+      if (isInitializing) return;  // 初始化阶段不保存
+      config.enabled = e.target.checked;
+      await chrome.storage.local.set({ bossConfig: config });
+      showToast(config.enabled ? '助手已启用' : '助手已禁用', 'info');
+    });
+  }
 
   // 自动打招呼
-  document.getElementById('btnAutoGreet').addEventListener('click', async () => {
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tabs[0] && tabs[0].url && tabs[0].url.includes('zhipin.com')) {
-      chrome.tabs.sendMessage(tabs[0].id, { action: 'startAutoGreet' });
-      showToast('已开始自动打招呼', 'success');
-      window.close();
-    } else {
-      showToast('请先打开Boss直聘页面', 'warning');
-    }
-  });
-
-  // 打开Boss直聘
-  document.getElementById('btnOpenBoss').addEventListener('click', () => {
-    chrome.tabs.create({ url: 'https://www.zhipin.com/web/geek/job' });
-  });
-
-  // 刷新统计
-  document.getElementById('btnRefresh').addEventListener('click', async () => {
-    await loadStats();
-    showToast('统计已刷新', 'success');
-  });
-
-  // 保存配置
-  document.getElementById('btnSaveConfig').addEventListener('click', async () => {
-    await saveConfig();
-  });
-
-  // 恢复默认配置
-  document.getElementById('btnResetConfig').addEventListener('click', async () => {
-    if (confirm('确定要恢复默认配置吗？这将覆盖当前所有设置。')) {
-      config = getDefaultConfig();
-      populateConfigForm(config);
-      await chrome.storage.local.set({ bossConfig: config });
-      showToast('已恢复默认配置', 'success');
-    }
-  });
-
-  // 清空日志
-  document.getElementById('btnClearLogs').addEventListener('click', async () => {
-    if (confirm('确定要清空所有日志吗？')) {
-      await chrome.storage.local.remove(['bossLogs']);
-      document.getElementById('logsList').innerHTML = '<div class="empty-state">暂无日志</div>';
-      showToast('日志已清空', 'success');
-    }
-  });
-
-  // 导出日志
-  document.getElementById('btnExportLogs').addEventListener('click', async () => {
-    chrome.runtime.sendMessage({ action: 'exportLogs' }, (response) => {
-      if (response && response.logs) {
-        const blob = new Blob([JSON.stringify(response.logs, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `boss-assistant-logs-${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-        showToast('日志已导出', 'success');
+  const btnAutoGreet = document.getElementById('btnAutoGreet');
+  console.log('[Popup] btnAutoGreet 元素:', btnAutoGreet);
+  if (btnAutoGreet) {
+    btnAutoGreet.addEventListener('click', async () => {
+      console.log('[Popup] btnAutoGreet 被点击');
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tabs[0] && tabs[0].url && tabs[0].url.includes('zhipin.com')) {
+        chrome.tabs.sendMessage(tabs[0].id, { action: 'startAutoGreet' });
+        showToast('已开始自动打招呼', 'success');
+        window.close();
+      } else {
+        showToast('请先打开Boss直聘页面', 'warning');
       }
     });
-  });
+  }
+
+  // 打开Boss直聘
+  const btnOpenBoss = document.getElementById('btnOpenBoss');
+  console.log('[Popup] btnOpenBoss 元素:', btnOpenBoss);
+  if (btnOpenBoss) {
+    btnOpenBoss.addEventListener('click', () => {
+      console.log('[Popup] btnOpenBoss 被点击');
+      chrome.tabs.create({ url: 'https://www.zhipin.com/web/geek/job' });
+    });
+  }
+
+  // 刷新统计
+  const btnRefresh = document.getElementById('btnRefresh');
+  console.log('[Popup] btnRefresh 元素:', btnRefresh);
+  if (btnRefresh) {
+    btnRefresh.addEventListener('click', async () => {
+      console.log('[Popup] btnRefresh 被点击');
+      await loadStats();
+      showToast('统计已刷新', 'success');
+    });
+  }
+
+  // 保存配置
+  const btnSaveConfig = document.getElementById('btnSaveConfig');
+  console.log('[Popup] btnSaveConfig 元素:', btnSaveConfig);
+  if (btnSaveConfig) {
+    btnSaveConfig.addEventListener('click', async () => {
+      console.log('[Popup] btnSaveConfig 被点击');
+      await saveConfig();
+    });
+  }
+
+  // 恢复默认配置
+  const btnResetConfig = document.getElementById('btnResetConfig');
+  console.log('[Popup] btnResetConfig 元素:', btnResetConfig);
+  if (btnResetConfig) {
+    btnResetConfig.addEventListener('click', async () => {
+      console.log('[Popup] btnResetConfig 被点击');
+      if (confirm('确定要恢复默认配置吗？这将覆盖当前所有设置。')) {
+        config = getDefaultConfig();
+        populateConfigForm(config);
+        await chrome.storage.local.set({ bossConfig: config });
+        showToast('已恢复默认配置', 'success');
+      }
+    });
+  }
+
+  // 清空日志
+  const btnClearLogs = document.getElementById('btnClearLogs');
+  console.log('[Popup] btnClearLogs 元素:', btnClearLogs);
+  if (btnClearLogs) {
+    btnClearLogs.addEventListener('click', async () => {
+      console.log('[Popup] btnClearLogs 被点击');
+      if (confirm('确定要清空所有日志吗？')) {
+        await chrome.storage.local.remove(['bossLogs']);
+        document.getElementById('logsList').innerHTML = '<div class="empty-state">暂无日志</div>';
+        showToast('日志已清空', 'success');
+      }
+    });
+  }
+
+  // 导出日志
+  const btnExportLogs = document.getElementById('btnExportLogs');
+  console.log('[Popup] btnExportLogs 元素:', btnExportLogs);
+  if (btnExportLogs) {
+    btnExportLogs.addEventListener('click', async () => {
+      console.log('[Popup] btnExportLogs 被点击');
+      chrome.runtime.sendMessage({ action: 'exportLogs' }, (response) => {
+        if (response && response.logs) {
+          const blob = new Blob([JSON.stringify(response.logs, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `boss-assistant-logs-${new Date().toISOString().split('T')[0]}.json`;
+          a.click();
+          showToast('日志已导出', 'success');
+        }
+      });
+    });
+  }
 
   // 日志级别过滤
-  document.getElementById('logLevelFilter').addEventListener('change', (e) => {
-    loadLogs(e.target.value);
-  });
+  const logLevelFilter = document.getElementById('logLevelFilter');
+  console.log('[Popup] logLevelFilter 元素:', logLevelFilter);
+  if (logLevelFilter) {
+    logLevelFilter.addEventListener('change', (e) => {
+      console.log('[Popup] logLevelFilter 改变:', e.target.value);
+      loadLogs(e.target.value);
+    });
+  }
 
-  // 帮助链接
-  document.getElementById('linkHelp').addEventListener('click', (e) => {
-    e.preventDefault();
-    chrome.tabs.create({ url: 'https://github.com/YUKIJUDAI/boss-assistant' });
-  });
+  // 帮助链接（如果存在）
+  const linkHelp = document.getElementById('linkHelp');
+  if (linkHelp) {
+    console.log('[Popup] linkHelp 元素:', linkHelp);
+    linkHelp.addEventListener('click', (e) => {
+      console.log('[Popup] linkHelp 被点击');
+      e.preventDefault();
+      chrome.tabs.create({ url: 'https://github.com/YUKIJUDAI/boss-assistant' });
+    });
+  }
+
+  console.log('[Popup] ✓ 所有事件监听器绑定完成');
 }
 
 /**

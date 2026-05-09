@@ -378,8 +378,9 @@
       </div>
     `;
 
+    // 点击控制面板时，提示用户点击扩展图标
     panel.onclick = () => {
-      chrome.runtime.sendMessage({ action: 'openPopup' });
+      BossUtils.showToast('请点击浏览器右上角的扩展图标打开配置面板', 'info');
     };
 
     document.body.appendChild(panel);
