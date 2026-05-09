@@ -123,29 +123,53 @@ function collectConfigFromForm() {
  */
 async function loadStats() {
   return new Promise((resolve) => {
+    console.log('[Popup] 发送 getStats 消息到 background');
+
     chrome.runtime.sendMessage({ action: 'getStats' }, (stats) => {
-      if (!stats) {
+      console.log('[Popup] 收到 getStats 响应:', stats);
+
+      // 检查是否有错误
+      if (chrome.runtime.lastError) {
+        console.error('[Popup] getStats 错误:', chrome.runtime.lastError.message);
         resolve();
         return;
       }
 
-      document.getElementById('statGreeted').textContent = stats.todayGreeted || 0;
-      document.getElementById('statProcessed').textContent = stats.todayProcessed || 0;
-      document.getElementById('statMatched').textContent = '0';  // TODO: 实现匹配统计
+      if (!stats) {
+        console.log('[Popup] stats 为空，跳过');
+        resolve();
+        return;
+      }
 
-      // 显示最近日志
-      const logsList = document.getElementById('recentLogsList');
-      if (stats.recentLogs && stats.recentLogs.length > 0) {
-        logsList.innerHTML = stats.recentLogs.slice(0, 5).map(log => `
-          <div class="log-item log-${log.level}">
-            <span class="log-time">${log.time}</span>
-            <span class="log-message">${log.message}</span>
-          </div>
-        `).join('');
+      try {
+        document.getElementById('statGreeted').textContent = stats.todayGreeted || 0;
+        document.getElementById('statProcessed').textContent = stats.todayProcessed || 0;
+        document.getElementById('statMatched').textContent = '0';  // TODO: 实现匹配统计
+
+        // 显示最近日志
+        const logsList = document.getElementById('recentLogsList');
+        if (stats.recentLogs && stats.recentLogs.length > 0) {
+          logsList.innerHTML = stats.recentLogs.slice(0, 5).map(log => `
+            <div class="log-item log-${log.level}">
+              <span class="log-time">${log.time}</span>
+              <span class="log-message">${log.message}</span>
+            </div>
+          `).join('');
+        }
+
+        console.log('[Popup] 统计数据更新完成');
+      } catch (error) {
+        console.error('[Popup] 更新统计数据失败:', error);
       }
 
       resolve();
     });
+
+    // 添加超时保护，防止卡住
+    setTimeout(() => {
+      console.warn('[Popup] getStats 超时，继续初始化');
+      resolve();
+    }, 2000);
   });
 }
 
