@@ -30,16 +30,35 @@ bonusSkills: ['React', 'Node.js'],      // 👈 加分技能
 excludedKeywords: ['外包', '996'],      // 👈 排除关键词
 ```
 
-## ⚖️ 评分权重
+## ⚖️ 两阶段评分系统 🆕
+
+### 列表页初步评分（25分制）
+
+```javascript
+// 仅评估客观条件，快速初筛
+{
+  salary: 15,   // 👈 薪资匹配（最高15分）
+  location: 10, // 👈 地点匹配（最高10分）
+  // 不评估技能、加分、标题（留给详情页）
+}
+```
+
+**颜色标识**：
+- 🟢 绿色（25分）：薪资+地点完全匹配
+- 🔵 蓝色（15-24分）：部分匹配
+- ⚪ 灰色（0-14分）：条件不符
+
+### 详情页精确评分（100分制）
 
 ```javascript
 // 位置: BossConfig.scoring.maxScores
+// 基于完整职位描述（JD）全维度评分
 {
-  skill: 50,    // 👈 技能匹配（默认最高50分）
-  bonus: 20,    // 👈 加分技能（默认最高20分）
+  skill: 50,    // 👈 技能匹配（默认最高50分）🆕 详情页分析
+  bonus: 20,    // 👈 加分技能（默认最高20分）🆕 详情页分析
   salary: 15,   // 👈 薪资匹配（默认最高15分）
   location: 10, // 👈 地点匹配（默认最高10分）
-  title: 5,     // 👈 标题匹配（默认最高5分）
+  title: 5,     // 👈 标题匹配（默认最高5分）🆕 详情页分析
 }
 
 // 示例：更看重薪资
@@ -48,6 +67,16 @@ maxScores: {
   salary: 30,  // ⬆️ 提高薪资权重
 }
 ```
+
+**渐进式显示**：
+1. 立即显示初步分（薪资+地点）
+2. 后台分析完整JD
+3. 更新为精确分（所有维度）
+
+**缓存机制**：
+- 自动缓存评分结果
+- 最多保存200个职位
+- 7天自动过期
 
 ## 🛡️ 防检测参数
 
@@ -147,6 +176,9 @@ debug: {
 BossConfig.defaults.salaryMin = 35000;
 BossConfig.defaults.matchThreshold = 70;
 BossConfig.scoring.maxScores.salary = 30;  // 提高薪资权重
+
+// 💡 列表页会自动过滤薪资不达标的职位（<35K会显示灰色/0分）
+// 只有薪资≥35K的才会显示蓝色/绿色标签
 ```
 
 ### 场景2：提高效率（多打招呼）
@@ -156,6 +188,9 @@ BossConfig.defaults.dailyLimit = 50;
 BossConfig.behavior.delays.beforeClick = { min: 500, max: 1000 };
 BossConfig.behavior.limits.dailyGreet = 50;
 BossConfig.behavior.limits.maxContinuous = 10;
+
+// 💡 列表页快速初筛，详情页精确分析
+// 缓存机制避免重复评分，提升浏览速度
 ```
 
 ### 场景3：注重质量（少而精）
@@ -164,6 +199,32 @@ BossConfig.behavior.limits.maxContinuous = 10;
 BossConfig.defaults.dailyLimit = 15;
 BossConfig.defaults.matchThreshold = 80;
 BossConfig.scoring.levels.excellent = 85;
+
+// 💡 只关注详情页精确分≥80的高分职位
+// 列表页快速过滤掉不符合基础条件的职位
+```
+
+### 场景4：地点优先（通勤重要）🆕
+
+```javascript
+BossConfig.defaults.locations = ['杭州·滨江区', '杭州·西湖区'];
+BossConfig.scoring.maxScores.location = 20;  // 提高地点权重
+BossConfig.scoring.maxScores.skill = 40;     // 相应降低技能权重
+
+// 💡 列表页：地点不匹配的直接0分（灰色）
+// 详情页：地点权重提升至20分
+```
+
+### 场景5：技能第一（技术栈匹配）🆕
+
+```javascript
+BossConfig.defaults.requiredSkills = ['Vue3', 'TypeScript', 'Vite'];
+BossConfig.defaults.bonusSkills = ['Pinia', 'Vitest', 'Playwright'];
+BossConfig.defaults.matchThreshold = 70;
+
+// 💡 列表页：仅显示薪资+地点基础分
+// 详情页：完整JD技能分析（最高50分技能+20分加分）
+// 技能匹配度高的职位会在详情页大幅提分
 ```
 
 ---
