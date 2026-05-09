@@ -3,13 +3,42 @@
  * 在Boss直聘页面上注入功能
  */
 
+// 诊断日志 - 脚本开始执行
+console.log('[Boss助手诊断] 1. 脚本文件开始执行', {
+  time: new Date().toISOString(),
+  url: window.location.href,
+  readyState: document.readyState
+});
+
 (async function() {
   'use strict';
 
+  console.log('[Boss助手诊断] 2. IIFE 开始执行');
+
+  // 检查依赖项
+  const dependencies = {
+    BossUtils: typeof BossUtils !== 'undefined',
+    BossChatbot: typeof BossChatbot !== 'undefined',
+    BossNotifier: typeof BossNotifier !== 'undefined',
+    JobMatcher: typeof JobMatcher !== 'undefined'
+  };
+  console.log('[Boss助手诊断] 3. 依赖项检查:', dependencies);
+
+  const missingDeps = Object.entries(dependencies)
+    .filter(([name, exists]) => !exists)
+    .map(([name]) => name);
+
+  if (missingDeps.length > 0) {
+    console.error('[Boss助手诊断] ✗ 缺少依赖项:', missingDeps);
+    console.error('[Boss助手诊断] ✗ 脚本将无法正常运行');
+  }
+
   // 避免重复注入
   if (window.bossAssistantInjected) {
+    console.log('[Boss助手诊断] 4. 检测到已注入标记，退出');
     return;
   }
+  console.log('[Boss助手诊断] 5. 设置注入标记');
   window.bossAssistantInjected = true;
 
   let config = null;
@@ -22,41 +51,58 @@
    * 初始化扩展
    */
   async function initialize() {
+    console.log('[Boss助手诊断] 6. initialize() 开始', {
+      isInitialized,
+      time: new Date().toISOString()
+    });
+
     try {
       // 如果已经初始化过，只重新加载配置
       if (isInitialized) {
+        console.log('[Boss助手诊断] 7. 已初始化，仅刷新配置');
         BossUtils.log('info', 'Boss助手已初始化，仅刷新配置');
         config = await BossUtils.getConfig();
         await BossChatbot.initialize(config);
         await BossNotifier.initialize(config);
+        console.log('[Boss助手诊断] 8. 配置刷新完成');
         return;
       }
 
+      console.log('[Boss助手诊断] 9. 首次初始化，加载配置');
       // 加载配置
       config = await BossUtils.getConfig();
+      console.log('[Boss助手诊断] 10. 配置加载完成:', { enabled: config.enabled });
 
       if (!config.enabled) {
+        console.log('[Boss助手诊断] 11. 助手已禁用，停止初始化');
         BossUtils.log('info', 'Boss助手已禁用');
         return;
       }
 
+      console.log('[Boss助手诊断] 12. 初始化子模块');
       // 初始化子模块
       await BossChatbot.initialize(config);
       await BossNotifier.initialize(config);
 
+      console.log('[Boss助手诊断] 13. 检测当前页面');
       // 检测当前页面
       detectPage();
 
+      console.log('[Boss助手诊断] 14. 添加控制面板');
       // 添加控制面板
       addControlPanel();
 
+      console.log('[Boss助手诊断] 15. 启动页面变化监听');
       // 页面变化监听
       observePageChanges();
 
       isInitialized = true;  // 标记为已初始化
+      console.log('[Boss助手诊断] 16. ✓ 初始化完成');
       BossUtils.log('info', 'Boss助手初始化成功');
       BossUtils.showToast('Boss求职助手已启动', 'success');
     } catch (error) {
+      console.error('[Boss助手诊断] ✗ 初始化失败:', error);
+      console.error('[Boss助手诊断] 错误堆栈:', error.stack);
       BossUtils.log('error', '初始化失败', error.message);
       BossUtils.showToast('Boss助手启动失败', 'error');
     }
@@ -447,10 +493,18 @@
    * 监听来自popup的消息
    */
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    console.log('[Boss助手诊断] 收到消息:', {
+      action: request.action,
+      time: new Date().toISOString(),
+      sender: sender.id
+    });
+
     if (request.action === 'startAutoGreet') {
+      console.log('[Boss助手诊断] 处理 startAutoGreet');
       handleAutoGreet();
       sendResponse({ success: true });
     } else if (request.action === 'refreshConfig') {
+      console.log('[Boss助手诊断] ⚠ 收到 refreshConfig 消息，将调用 initialize()');
       initialize();
       sendResponse({ success: true });
     }
@@ -485,5 +539,12 @@
   }
 
   // 启动
-  initialize();
+  console.log('[Boss助手诊断] 17. 准备调用 initialize() 启动扩展');
+  initialize().then(() => {
+    console.log('[Boss助手诊断] 18. ✓ initialize() Promise 已完成');
+  }).catch(error => {
+    console.error('[Boss助手诊断] ✗ initialize() Promise 失败:', error);
+  });
+
+  console.log('[Boss助手诊断] 19. IIFE 执行完成，等待 async 操作');
 })();
