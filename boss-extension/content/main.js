@@ -17,6 +17,8 @@
   let currentPage = null;
   let isInitialized = false;  // 防止重复初始化
   let pageObserver = null;    // 保存MutationObserver引用
+  let jobListObserver = null; // 职位列表滚动加载观察器
+  let processedJobIds = new Set(); // 已处理的职位ID，避免重复标记
 
   /**
    * 初始化扩展
@@ -169,6 +171,178 @@
     }
 
     console.log('[匹配调试] 7. ✓ 职位列表页处理完成');
+
+    // 显示诊断面板（第一个职位的详细信息）
+    if (jobs.length > 0) {
+      showDiagnosticPanel(jobs[0], config);
+    }
+
+    // 启动职位列表滚动加载监听
+    startJobListObserver();
+  }
+
+  /**
+   * 显示诊断面板（无需 F12）
+   */
+  function showDiagnosticPanel(firstJob, config) {
+    // 移除旧面板
+    const oldPanel = document.getElementById('boss-diagnostic-panel');
+    if (oldPanel) oldPanel.remove();
+
+    // 为第一个职位评分
+    const matchResult = JobMatcher.match(firstJob, config);
+
+    const panel = document.createElement('div');
+    panel.id = 'boss-diagnostic-panel';
+    panel.innerHTML = `
+      <div style="
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        z-index: 99999;
+        max-width: 400px;
+        font-size: 12px;
+        font-family: monospace;
+        border: 2px solid #1890ff;
+      ">
+        <div style="font-weight: bold; margin-bottom: 10px; color: #1890ff; display: flex; justify-content: space-between; align-items: center;">
+          <span>🔍 匹配诊断</span>
+          <button id="close-diagnostic" style="border: none; background: none; cursor: pointer; font-size: 18px;">×</button>
+        </div>
+        <div style="margin-bottom: 8px;">
+          <strong>示例职位:</strong> ${firstJob.title}
+        </div>
+        <div style="margin-bottom: 8px;">
+          <strong>公司:</strong> ${firstJob.company}
+        </div>
+        <div style="margin-bottom: 8px;">
+          <strong>标签:</strong> ${firstJob.tags.join(', ') || '(无)'}
+        </div>
+        <div style="margin-bottom: 8px;">
+          <strong>经验:</strong> ${firstJob.experience || '(无)'}
+        </div>
+        <div style="border-top: 1px solid #eee; padding-top: 8px; margin-top: 8px;">
+          <strong>您的配置:</strong>
+        </div>
+        <div style="margin: 4px 0;">必备: ${config.requiredSkills?.join(', ') || '(未设置)'}</div>
+        <div style="margin: 4px 0;">加分: ${config.bonusSkills?.join(', ') || '(未设置)'}</div>
+        <div style="margin: 4px 0;">阈值: ${config.matchThreshold || 60}分</div>
+        <div style="border-top: 1px solid #eee; padding-top: 8px; margin-top: 8px;">
+          <strong>评分结果:</strong>
+        </div>
+        <div style="margin: 4px 0; ${matchResult.details.skillScore === 0 ? 'color: red; font-weight: bold;' : ''}">
+          技能: ${matchResult.details.skillScore || 0}/${config.requiredSkills?.length ? 50 : 50}分
+        </div>
+        <div style="margin: 4px 0;">加分: ${matchResult.details.bonusScore || 0}/20分</div>
+        <div style="margin: 4px 0;">薪资: ${matchResult.details.salaryScore || 0}/15分</div>
+        <div style="margin: 4px 0;">地点: ${matchResult.details.locationScore || 0}/10分</div>
+        <div style="margin: 4px 0; font-weight: bold; color: ${matchResult.score >= 60 ? '#52c41a' : '#f5222d'};">
+          总分: ${matchResult.score}/100
+        </div>
+        <div style="margin-top: 8px; font-size: 10px; color: #999;">
+          鼠标悬停职位标签可看详情
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(panel);
+
+    // 添加关闭按钮事件
+    document.getElementById('close-diagnostic').addEventListener('click', () => {
+      panel.remove();
+    });
+
+    // 5秒后自动缩小
+    setTimeout(() => {
+      panel.querySelector('div').style.transform = 'scale(0.85)';
+      panel.querySelector('div').style.transition = 'transform 0.3s';
+    }, 3000);
+  }
+
+  /**
+   * 监听职位列表的滚动加载
+   */
+  function startJobListObserver() {
+    // 如果已有观察器，先断开
+    if (jobListObserver) {
+      jobListObserver.disconnect();
+    }
+
+    console.log('[滚动加载] 启动职位列表观察器...');
+
+    // 找到职位列表容器
+    const jobListContainer = document.querySelector('.job-list-box, [class*="job-list"]') || document.body;
+
+    jobListObserver = new MutationObserver((mutations) => {
+      let hasNewJobs = false;
+
+      for (const mutation of mutations) {
+        if (mutation.addedNodes.length > 0) {
+          // 检查新增的节点是否包含职位卡片
+          mutation.addedNodes.forEach(node => {
+            if (node.nodeType === 1) { // Element node
+              // 检查节点本身或其子节点是否是职位卡片
+              const isJobCard = node.className && (
+                node.className.includes('job-card') ||
+                node.className.includes('job-list')
+              );
+
+              const hasJobCards = node.querySelectorAll &&
+                node.querySelectorAll('[class*="job-card"], li[class*="job"]').length > 0;
+
+              if (isJobCard || hasJobCards) {
+                hasNewJobs = true;
+              }
+            }
+          });
+        }
+      }
+
+      if (hasNewJobs) {
+        console.log('[滚动加载] 检测到新职位，准备评分...');
+        // 延迟一点确保 DOM 完全加载
+        setTimeout(() => {
+          handleNewJobs();
+        }, 500);
+      }
+    });
+
+    jobListObserver.observe(jobListContainer, {
+      childList: true,
+      subtree: true
+    });
+
+    console.log('[滚动加载] ✓ 观察器已启动');
+    BossUtils.log('info', '滚动加载监听已启动');
+  }
+
+  /**
+   * 处理新加载的职位
+   */
+  async function handleNewJobs() {
+    console.log('[滚动加载] 开始扫描新职位...');
+
+    const jobs = await scanJobs();
+
+    // 过滤出新职位（之前没处理过的）
+    const newJobs = jobs.filter(job => !processedJobIds.has(job.id));
+
+    if (newJobs.length === 0) {
+      console.log('[滚动加载] 没有发现新职位');
+      return;
+    }
+
+    console.log(`[滚动加载] 发现 ${newJobs.length} 个新职位`);
+    BossUtils.showToast(`发现 ${newJobs.length} 个新职位，正在评分...`, 'info');
+
+    // 标记新职位
+    markAllJobsOnPage(newJobs, config);
+
+    console.log('[滚动加载] ✓ 新职位处理完成');
   }
 
   /**
@@ -271,7 +445,15 @@
 
         if (job.title && job.company) {
           jobs.push(job);
-          console.log(`[扫描调试] ✓ 成功解析: ${job.company} - ${job.title}`);
+          console.log(`[扫描调试] ✓ 成功解析:`, {
+            标题: job.title,
+            公司: job.company,
+            薪资: job.salary,
+            地点: job.location,
+            经验: job.experience,
+            标签数量: job.tags.length,
+            标签内容: job.tags.join(', ')
+          });
         } else {
           console.warn(`[扫描调试] ✗ 跳过无效职位:`, {
             有标题: !!job.title,
@@ -318,6 +500,16 @@
 
     for (const job of jobs) {
       if (!job.element) continue;
+
+      // 检查是否已经标记过
+      const existingBadge = job.element.querySelector('.boss-assistant-badge');
+      if (existingBadge) {
+        // 移除旧标签（可能配置已更新）
+        existingBadge.remove();
+        // 移除旧边框样式
+        job.element.style.border = '';
+        job.element.style.boxShadow = '';
+      }
 
       // 为每个职位评分
       const matchResult = JobMatcher.match(job, config);
@@ -376,6 +568,9 @@
       } else if (matchResult.score >= 60) {
         job.element.style.border = '1px solid #1890ff';
       }
+
+      // 记录已处理的职位ID
+      processedJobIds.add(job.id);
 
       markedCount++;
     }
@@ -626,7 +821,21 @@
       handleAutoGreet();
       sendResponse({ success: true });
     } else if (request.action === 'refreshConfig') {
-      initialize();
+      console.log('[配置更新] 收到配置刷新请求');
+
+      // 清空已处理职位列表，以便重新评分
+      processedJobIds.clear();
+      console.log('[配置更新] 已清空已处理职位列表');
+
+      // 重新初始化（会重新加载配置）
+      initialize().then(() => {
+        // 如果在职位列表页，重新处理
+        if (currentPage === 'job-list') {
+          console.log('[配置更新] 重新处理职位列表页');
+          BossUtils.showToast('配置已更新，正在重新评分...', 'info');
+          handleJobListPage();
+        }
+      });
       sendResponse({ success: true });
     }
   });

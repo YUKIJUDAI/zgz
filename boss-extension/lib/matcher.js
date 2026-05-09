@@ -96,38 +96,95 @@ const JobMatcher = {
    * 必需技能评分
    */
   scoreSkills(jobInfo, config, maxScore = 50) {
-    const text = `${jobInfo.title} ${jobInfo.description || ''} ${(jobInfo.tags || []).join(' ')}`.toLowerCase();
+    // 构建搜索文本：标题 + 描述 + 标签 + 公司名 + 经验要求
+    const searchText = [
+      jobInfo.title || '',
+      jobInfo.description || '',
+      jobInfo.company || '',
+      jobInfo.experience || '',
+      jobInfo.salary || '',
+      ...(jobInfo.tags || [])
+    ].join(' ').toLowerCase();
+
     const required = config.requiredSkills || [];
 
-    if (!required.length) return maxScore;
+    console.log('[技能匹配]', {
+      职位: jobInfo.title,
+      搜索文本长度: searchText.length,
+      必备技能: required,
+      搜索文本预览: searchText.substring(0, 200)
+    });
+
+    if (!required.length) {
+      console.log('[技能匹配] 没有配置必备技能，给满分');
+      return maxScore;
+    }
 
     let matched = 0;
+    const matchedSkills = [];
+    const unmatchedSkills = [];
+
     for (const skill of required) {
-      if (text.includes(skill.toLowerCase())) {
+      if (searchText.includes(skill.toLowerCase())) {
         matched++;
+        matchedSkills.push(skill);
+      } else {
+        unmatchedSkills.push(skill);
       }
     }
 
-    return (matched / required.length) * maxScore;
+    const score = (matched / required.length) * maxScore;
+
+    console.log('[技能匹配] 结果:', {
+      匹配: `${matched}/${required.length}`,
+      分数: score,
+      匹配的技能: matchedSkills,
+      未匹配: unmatchedSkills
+    });
+
+    return score;
   },
 
   /**
    * 加分技能评分
    */
   scoreBonus(jobInfo, config, maxScore = 20, scorePerSkill = 5) {
-    const text = `${jobInfo.title} ${jobInfo.description || ''} ${(jobInfo.tags || []).join(' ')}`.toLowerCase();
+    // 构建搜索文本：标题 + 描述 + 标签 + 公司名 + 经验要求
+    const searchText = [
+      jobInfo.title || '',
+      jobInfo.description || '',
+      jobInfo.company || '',
+      jobInfo.experience || '',
+      jobInfo.salary || '',
+      ...(jobInfo.tags || [])
+    ].join(' ').toLowerCase();
+
     const bonus = config.bonusSkills || [];
 
     if (!bonus.length) return 0;
 
     let matched = 0;
+    const matchedSkills = [];
+
     for (const skill of bonus) {
-      if (text.includes(skill.toLowerCase())) {
+      if (searchText.includes(skill.toLowerCase())) {
         matched++;
+        matchedSkills.push(skill);
       }
     }
 
-    return Math.min(matched * scorePerSkill, maxScore);
+    const score = Math.min(matched * scorePerSkill, maxScore);
+
+    if (matched > 0) {
+      console.log('[加分技能]', {
+        职位: jobInfo.title,
+        匹配数量: matched,
+        分数: score,
+        匹配的技能: matchedSkills
+      });
+    }
+
+    return score;
   },
 
   /**

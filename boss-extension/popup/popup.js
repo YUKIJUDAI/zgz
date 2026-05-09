@@ -53,8 +53,20 @@ async function saveConfig() {
   config = collectConfigFromForm();
 
   return new Promise((resolve) => {
-    chrome.storage.local.set({ bossConfig: config }, () => {
+    chrome.storage.local.set({ bossConfig: config }, async () => {
       showToast('配置已保存', 'success');
+
+      // 通知所有Boss直聘标签页刷新配置
+      const tabs = await chrome.tabs.query({ url: 'https://www.zhipin.com/*' });
+      tabs.forEach(tab => {
+        chrome.tabs.sendMessage(tab.id, { action: 'refreshConfig' }, () => {
+          // 忽略错误（标签页可能已关闭）
+          if (chrome.runtime.lastError) {
+            console.log('[Popup] 发送refreshConfig失败:', chrome.runtime.lastError.message);
+          }
+        });
+      });
+
       resolve();
     });
   });
