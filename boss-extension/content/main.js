@@ -15,12 +15,23 @@
   let config = null;
   let isRunning = false;
   let currentPage = null;
+  let isInitialized = false;  // 防止重复初始化
+  let pageObserver = null;    // 保存MutationObserver引用
 
   /**
    * 初始化扩展
    */
   async function initialize() {
     try {
+      // 如果已经初始化过，只重新加载配置
+      if (isInitialized) {
+        BossUtils.log('info', 'Boss助手已初始化，仅刷新配置');
+        config = await BossUtils.getConfig();
+        await BossChatbot.initialize(config);
+        await BossNotifier.initialize(config);
+        return;
+      }
+
       // 加载配置
       config = await BossUtils.getConfig();
 
@@ -42,6 +53,7 @@
       // 页面变化监听
       observePageChanges();
 
+      isInitialized = true;  // 标记为已初始化
       BossUtils.log('info', 'Boss助手初始化成功');
       BossUtils.showToast('Boss求职助手已启动', 'success');
     } catch (error) {
@@ -339,6 +351,12 @@
    * 添加控制面板
    */
   function addControlPanel() {
+    // 检查是否已存在，避免重复创建
+    if (document.getElementById('boss-assistant-panel')) {
+      BossUtils.log('debug', '控制面板已存在，跳过创建');
+      return;
+    }
+
     const panel = document.createElement('div');
     panel.id = 'boss-assistant-panel';
     panel.innerHTML = `
@@ -405,9 +423,15 @@
    * 监听页面变化
    */
   function observePageChanges() {
+    // 如果已有observer，先断开
+    if (pageObserver) {
+      pageObserver.disconnect();
+      BossUtils.log('debug', '断开旧的页面监听器');
+    }
+
     let lastUrl = window.location.href;
 
-    const observer = new MutationObserver(() => {
+    pageObserver = new MutationObserver(() => {
       if (window.location.href !== lastUrl) {
         lastUrl = window.location.href;
         BossUtils.log('info', '页面URL变化，重新检测页面');
@@ -415,7 +439,8 @@
       }
     });
 
-    observer.observe(document.body, { childList: true, subtree: true });
+    pageObserver.observe(document.body, { childList: true, subtree: true });
+    BossUtils.log('debug', '页面变化监听器已启动');
   }
 
   /**

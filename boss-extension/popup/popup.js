@@ -3,6 +3,7 @@
  */
 
 let config = null;
+let isInitializing = true;  // 防止初始化时触发change事件保存
 
 // 页面加载完成
 document.addEventListener('DOMContentLoaded', async () => {
@@ -10,6 +11,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadStats();
   initEventListeners();
   initTabSwitching();
+  // 初始化完成后，允许保存配置
+  setTimeout(() => { isInitializing = false; }, 100);
 });
 
 /**
@@ -135,6 +138,7 @@ async function loadStats() {
 function initEventListeners() {
   // 启用/禁用开关
   document.getElementById('enableSwitch').addEventListener('change', async (e) => {
+    if (isInitializing) return;  // 初始化阶段不保存
     config.enabled = e.target.checked;
     await chrome.storage.local.set({ bossConfig: config });
     showToast(config.enabled ? '助手已启用' : '助手已禁用', 'info');
