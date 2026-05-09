@@ -356,36 +356,133 @@
   }
 
   /**
-   * 处理职位详情页
+   * 处理职位详情页（渐进式评分）
    */
   async function handleJobDetailPage() {
-    BossUtils.log('info', '开始处理职位详情页');
+    BossUtils.log('info', '开始处理职位详情页（渐进式评分）');
 
-    // 等待页面加载
-    await BossUtils.randomDelay(1000, 2000);
+    const jobId = extractJobIdFromURL();
+    console.log('[详情页] 职位ID:', jobId);
 
-    // 提取职位信息
-    const jobInfo = extractJobDetail();
-    if (!jobInfo) {
-      BossUtils.log('warn', '无法提取职位信息');
+    // 步骤1: 检查缓存
+    const cachedScore = await JobScoreCache.load(jobId);
+    console.log('[详情页] 缓存数据:', cachedScore);
+
+    // 步骤2: 立即显示初步分（如果有缓存）
+    if (cachedScore?.preliminaryScore) {
+      console.log('[详情页] 显示初步分:', cachedScore.preliminaryScore.score);
+      showScorePanel({
+        score: cachedScore.preliminaryScore.score,
+        details: cachedScore.preliminaryScore.details,
+        status: 'preliminary',
+        loading: true,
+        message: '🔄 正在精确分析...'
+      });
+    } else {
+      // 无缓存，显示加载中
+      console.log('[详情页] 无缓存，显示加载中');
+      showScorePanel({
+        status: 'loading',
+        message: '正在分析职位...'
+      });
+    }
+
+    // 步骤3: 检查是否已有精确分（避免重复评分）
+    if (cachedScore?.accurateScore) {
+      const age = Date.now() - cachedScore.accurateScore.timestamp;
+      const CACHE_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7天
+
+      if (age < CACHE_EXPIRY) {
+        console.log('[详情页] 使用缓存的精确分:', cachedScore.accurateScore.score);
+        // 缓存未过期，直接显示精确分
+        updateScorePanel({
+          oldScore: cachedScore.preliminaryScore?.score,
+          newScore: cachedScore.accurateScore.score,
+          details: cachedScore.accurateScore.details,
+          status: 'accurate',
+          cached: true,
+          showDiff: false  // 使用缓存不显示对比
+        });
+        return; // 结束流程
+      }
+    }
+
+    // 步骤4: 等待页面加载
+    try {
+      await waitForJobDetailLoaded();
+      console.log('[详情页] 页面加载完成');
+    } catch (error) {
+      console.error('[详情页] 页面加载超时');
+      showScorePanel({
+        status: 'error',
+        message: '页面加载超时，请刷新重试'
+      });
+      BossUtils.log('error', '详情页加载超时', window.location.href);
       return;
     }
 
-    // 匹配评分
-    const matchResult = JobMatcher.match(jobInfo, config);
-    BossUtils.log('info', `职位匹配度: ${matchResult.score}/100`);
+    // 步骤5: 提取完整职位信息
+    const jobInfo = extractJobDetail();
+    console.log('[详情页] 提取的职位信息:', {
+      标题: jobInfo?.title,
+      描述长度: jobInfo?.description?.length
+    });
 
-    // 在页面上显示匹配度
-    showMatchScoreOnPage(matchResult);
+    if (!jobInfo?.description || jobInfo.description.length < 20) {
+      // JD提取失败或太短，降级处理
+      console.warn('[详情页] JD提取失败或过短');
+      showScorePanel({
+        status: 'warning',
+        message: '无法获取完整职位描述，使用基础评分',
+        score: cachedScore?.preliminaryScore?.score || 0,
+        details: cachedScore?.preliminaryScore?.details
+      });
 
-    // 如果匹配度高且启用了自动打招呼
-    if (matchResult.passed && config.greetingEnabled) {
-      const todayCount = await BossUtils.getTodayGreetCount();
-      if (todayCount < config.dailyLimit) {
-        // 添加一键打招呼按钮
-        addQuickGreetButton(jobInfo);
+      BossUtils.log('warn', '详情页JD提取失败', {
+        url: window.location.href,
+        descLength: jobInfo?.description?.length
+      });
+      return;
+    }
+
+    // 步骤6: 基于完整JD重新评分（全维度）
+    console.log('[详情页] 开始全维度评分...');
+    const accurateResult = JobMatcher.match(jobInfo, config);
+    console.log('[详情页] 精确分:', accurateResult.score);
+
+    // 步骤7: 更新显示 - 渐进式动画
+    updateScorePanel({
+      oldScore: cachedScore?.preliminaryScore?.score,
+      newScore: accurateResult.score,
+      details: accurateResult.details,
+      status: 'accurate',
+      hasFullDescription: true,
+      showDiff: true  // 显示分数变化
+    });
+
+    // 步骤8: 缓存精确分
+    await JobScoreCache.saveAccurateScore(jobId, {
+      score: accurateResult.score,
+      details: accurateResult.details,
+      cachedInfo: {
+        title: jobInfo.title,
+        company: jobInfo.company,
+        salary: jobInfo.salary,
+        location: jobInfo.location
+      },
+      hasFullDescription: true
+    });
+    console.log('[详情页] 精确分已缓存');
+
+    // 步骤9: 显示分数对比（如果差异明显）
+    if (cachedScore?.preliminaryScore?.score) {
+      const diff = accurateResult.score - cachedScore.preliminaryScore.score;
+      if (Math.abs(diff) >= 10) {  // 差异10分以上才显示提示
+        showScoreDiffToast(diff);
       }
     }
+
+    console.log('[详情页] ✓ 评分流程完成');
   }
 
   /**
@@ -500,6 +597,39 @@
       BossUtils.log('error', '提取职位详情失败', error.message);
       return null;
     }
+  }
+
+  /**
+   * 从URL提取职位ID
+   */
+  function extractJobIdFromURL() {
+    // Boss直聘详情页URL格式: /job_detail/xxxxx.html
+    const match = window.location.pathname.match(/job_detail\/([^.]+)/);
+    return match ? match[1] : Math.random().toString(36).substr(2, 9);
+  }
+
+  /**
+   * 等待职位详情页加载完成
+   * @param {number} timeout - 超时时间（毫秒）
+   * @returns {Promise<boolean>}
+   */
+  async function waitForJobDetailLoaded(timeout = 5000) {
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < timeout) {
+      const descElement = document.querySelector(
+        '.job-sec-text, .job-detail-section, .job-description'
+      );
+
+      if (descElement && descElement.textContent.trim().length > 50) {
+        // 描述至少50字符，认为加载成功
+        return true;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+
+    throw new Error('页面加载超时');
   }
 
   /**
@@ -621,107 +751,6 @@
     }
   }
 
-  /**
-   * 在详情页显示匹配度
-   */
-  function showMatchScoreOnPage(matchResult) {
-    const scorePanel = document.createElement('div');
-    scorePanel.className = 'boss-assistant-score-panel';
-    scorePanel.innerHTML = `
-      <div style="
-        position: fixed;
-        top: 100px;
-        right: 20px;
-        background: white;
-        padding: 20px;
-        border-radius: 12px;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-        z-index: 9999;
-        min-width: 250px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      ">
-        <h3 style="margin: 0 0 15px 0; font-size: 16px; color: #333;">职位匹配度分析</h3>
-        <div style="font-size: 32px; font-weight: bold; color: ${matchResult.score >= 80 ? '#52c41a' : matchResult.score >= 60 ? '#1890ff' : '#faad14'}; text-align: center; margin: 10px 0;">
-          ${matchResult.score}
-        </div>
-        <div style="text-align: center; color: #999; margin-bottom: 15px;">满分100</div>
-        <div style="border-top: 1px solid #f0f0f0; padding-top: 15px; font-size: 13px; color: #666;">
-          <div style="margin: 8px 0;">技能: ${matchResult.details.skillScore || 0}分</div>
-          <div style="margin: 8px 0;">加分项: ${matchResult.details.bonusScore || 0}分</div>
-          <div style="margin: 8px 0;">薪资: ${matchResult.details.salaryScore || 0}分</div>
-          <div style="margin: 8px 0;">地点: ${matchResult.details.locationScore || 0}分</div>
-        </div>
-        <div style="margin-top: 15px; padding: 10px; background: ${matchResult.passed ? '#f6ffed' : '#fff7e6'}; border-radius: 6px; font-size: 13px; color: ${matchResult.passed ? '#52c41a' : '#faad14'}; text-align: center;">
-          ${matchResult.passed ? '✓ 推荐投递' : '△ 匹配度较低'}
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(scorePanel);
-
-    // 5秒后自动缩小到角落
-    setTimeout(() => {
-      scorePanel.querySelector('div').style.cssText += 'transform: scale(0.8); transition: transform 0.3s;';
-    }, 5000);
-  }
-
-  /**
-   * 添加一键打招呼按钮
-   */
-  function addQuickGreetButton(jobInfo) {
-    const button = document.createElement('button');
-    button.className = 'boss-assistant-quick-greet';
-    button.textContent = '🤖 一键打招呼';
-    button.style.cssText = `
-      position: fixed;
-      bottom: 30px;
-      right: 30px;
-      padding: 14px 24px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      border: none;
-      border-radius: 25px;
-      font-size: 15px;
-      font-weight: bold;
-      cursor: pointer;
-      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-      z-index: 9999;
-      transition: all 0.3s;
-    `;
-
-    button.onmouseover = () => {
-      button.style.transform = 'translateY(-2px)';
-      button.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.6)';
-    };
-
-    button.onmouseout = () => {
-      button.style.transform = 'translateY(0)';
-      button.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)';
-    };
-
-    button.onclick = async () => {
-      button.disabled = true;
-      button.textContent = '发送中...';
-
-      const result = await BossChatbot.sendGreeting(jobInfo.id, jobInfo);
-
-      if (result.success) {
-        button.textContent = '✓ 已发送';
-        button.style.background = '#52c41a';
-        setTimeout(() => button.remove(), 2000);
-      } else {
-        button.textContent = '✗ 发送失败';
-        button.style.background = '#f5222d';
-        button.disabled = false;
-        setTimeout(() => {
-          button.textContent = '🤖 一键打招呼';
-          button.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-        }, 2000);
-      }
-    };
-
-    document.body.appendChild(button);
-  }
 
   /**
    * 添加控制面板
