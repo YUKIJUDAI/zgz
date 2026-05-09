@@ -21,6 +21,7 @@
         "config.js",
         "lib/utils.js",
         "lib/matcher.js",
+        "lib/score-cache.js",
         "lib/chatbot.js",
         "lib/notifier.js",
         "content/main.js"
