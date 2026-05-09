@@ -162,8 +162,8 @@ BossConfig.behavior.delays.beforeClick = { min: 1500, max: 3000 };
 
 在仪表盘可以看到：
 
-- 今日打招呼次数
-- 今日处理职位数
+- 打招呼次数
+- 处理职位数
 - 最近活动日志
 
 ## 开发测试

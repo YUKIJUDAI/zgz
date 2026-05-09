@@ -17,12 +17,6 @@
   "content_scripts": [
     {
       "matches": ["https://www.zhipin.com/*"],
-      "js": ["content/anti-anti-debug.js"],
-      "run_at": "document_start",
-      "all_frames": false
-    },
-    {
-      "matches": ["https://www.zhipin.com/*"],
       "js": [
         "config.js",
         "lib/utils.js",

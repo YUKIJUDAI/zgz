@@ -91,21 +91,75 @@
    * 处理职位列表页
    */
   async function handleJobListPage() {
+    console.log('[匹配调试] 1. 开始处理职位列表页');
     BossUtils.log('info', '开始处理职位列表页');
 
     // 等待职位列表加载
     await BossUtils.randomDelay(1000, 2000);
 
     // 扫描职位
+    console.log('[匹配调试] 2. 开始扫描职位...');
     const jobs = await scanJobs();
+    console.log('[匹配调试] 3. 扫描结果:', {
+      职位数量: jobs.length,
+      第一个职位: jobs[0] ? {
+        标题: jobs[0].title,
+        公司: jobs[0].company,
+        薪资: jobs[0].salary
+      } : '无'
+    });
     BossUtils.log('info', `扫描到 ${jobs.length} 个职位`);
 
+    if (jobs.length === 0) {
+      console.warn('[匹配调试] ⚠ 没有扫描到任何职位！');
+      BossUtils.showToast('未扫描到职位，请刷新页面重试', 'warning');
+      return;
+    }
+
     // 匹配职位
+    console.log('[匹配调试] 4. 开始匹配职位，配置:', {
+      必备技能: config.requiredSkills,
+      加分技能: config.bonusSkills,
+      匹配阈值: config.matchThreshold,
+      排除关键词: config.excludedKeywords
+    });
+
     const matchedJobs = await JobMatcher.matchBatch(jobs, config);
+
+    console.log('[匹配调试] 5. 匹配结果:', {
+      匹配数量: matchedJobs.length,
+      总职位数: jobs.length,
+      匹配率: `${((matchedJobs.length / jobs.length) * 100).toFixed(1)}%`
+    });
+
     BossUtils.log('info', `匹配到 ${matchedJobs.length} 个合适职位`);
 
-    // 在页面上标记匹配度
-    markJobsOnPage(matchedJobs);
+    if (matchedJobs.length === 0) {
+      console.warn('[匹配调试] ⚠ 没有职位通过匹配！');
+
+      // 显示详细信息
+      const msg = `扫描了${jobs.length}个职位，但没有符合条件的\n\n当前配置：\n` +
+        `• 必备技能：${config.requiredSkills?.join(', ') || '未设置'}\n` +
+        `• 匹配阈值：${config.matchThreshold || 60}分\n` +
+        `• 排除词：${config.excludedKeywords?.join(', ') || '无'}\n\n` +
+        `建议：降低匹配阈值或检查技能配置`;
+
+      BossUtils.showToast(`扫描了${jobs.length}个职位，0个匹配`, 'warning');
+
+      // 记录到日志
+      BossUtils.log('warn', `匹配失败：扫描${jobs.length}个职位，0个匹配`);
+      BossUtils.log('info', `配置：技能[${config.requiredSkills?.join(',')}] 阈值[${config.matchThreshold}]`);
+    } else {
+      // 匹配成功，显示摘要
+      const highScore = matchedJobs.filter(j => j.matchResult.score >= 80).length;
+      const msg = `✓ 找到${matchedJobs.length}个匹配职位（${highScore}个高分）`;
+      BossUtils.showToast(msg, 'success');
+      BossUtils.log('info', msg);
+    }
+
+    // 在页面上标记匹配度（标记所有职位，包括不匹配的）
+    console.log('[匹配调试] 6. 开始标记职位');
+    markAllJobsOnPage(jobs, config);
 
     // 通知高分职位
     for (const job of matchedJobs) {
@@ -113,6 +167,8 @@
         await BossNotifier.notifyHighScoreJob(job, job.matchResult.score);
       }
     }
+
+    console.log('[匹配调试] 7. ✓ 职位列表页处理完成');
   }
 
   /**
@@ -211,7 +267,81 @@
   }
 
   /**
-   * 在页面上标记匹配的职位
+   * 在页面上标记所有职位（包括不匹配的）
+   */
+  function markAllJobsOnPage(jobs, config) {
+    let markedCount = 0;
+
+    for (const job of jobs) {
+      if (!job.element) continue;
+
+      // 为每个职位评分
+      const matchResult = JobMatcher.match(job, config);
+
+      // 添加匹配度标签
+      const badge = document.createElement('div');
+      badge.className = 'boss-assistant-badge';
+      badge.textContent = `${matchResult.score}分`;
+
+      // 根据分数设置颜色
+      let bgColor, textColor;
+      if (matchResult.score >= 80) {
+        bgColor = '#52c41a';  // 绿色 - 强烈推荐
+        textColor = 'white';
+      } else if (matchResult.score >= 60) {
+        bgColor = '#1890ff';  // 蓝色 - 推荐
+        textColor = 'white';
+      } else if (matchResult.score >= 40) {
+        bgColor = '#faad14';  // 橙色 - 一般
+        textColor = 'white';
+      } else {
+        bgColor = '#d9d9d9';  // 灰色 - 不推荐
+        textColor = '#666';
+      }
+
+      badge.style.cssText = `
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: ${bgColor};
+        color: ${textColor};
+        padding: 6px 12px;
+        border-radius: 12px;
+        font-size: 13px;
+        font-weight: bold;
+        z-index: 10;
+        cursor: help;
+      `;
+
+      // 添加详细信息提示
+      badge.title = `匹配详情：\n` +
+        `总分：${matchResult.score}/100\n` +
+        `技能：${matchResult.details.skillScore || 0}分\n` +
+        `加分：${matchResult.details.bonusScore || 0}分\n` +
+        `薪资：${matchResult.details.salaryScore || 0}分\n` +
+        `地点：${matchResult.details.locationScore || 0}分\n` +
+        `${matchResult.passed ? '✓ 达到阈值' : '✗ 未达到阈值(' + (config.matchThreshold || 60) + '分)'}`;
+
+      job.element.style.position = 'relative';
+      job.element.appendChild(badge);
+
+      // 高分职位高亮边框
+      if (matchResult.score >= 80) {
+        job.element.style.border = '2px solid #52c41a';
+        job.element.style.boxShadow = '0 2px 8px rgba(82, 196, 26, 0.3)';
+      } else if (matchResult.score >= 60) {
+        job.element.style.border = '1px solid #1890ff';
+      }
+
+      markedCount++;
+    }
+
+    console.log(`[匹配调试] 已标记 ${markedCount} 个职位`);
+    BossUtils.log('info', `已为 ${markedCount} 个职位添加匹配度标签`);
+  }
+
+  /**
+   * 在页面上标记匹配的职位（旧方法，保留兼容性）
    */
   function markJobsOnPage(matchedJobs) {
     for (const job of matchedJobs) {

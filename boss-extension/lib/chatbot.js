@@ -295,7 +295,7 @@ const BossChatbot = {
     const remaining = this.config.dailyLimit - todayCount;
 
     if (remaining <= 0) {
-      BossUtils.showToast('今日打招呼次数已用完', 'warning');
+      BossUtils.showToast('打招呼次数已用完', 'warning');
       return results;
     }
 
