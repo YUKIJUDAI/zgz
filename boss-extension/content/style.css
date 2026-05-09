@@ -330,3 +330,120 @@ li.job-card.boss-highlighted {
     display: none !important;
   }
 }
+
+/* ===== 两阶段评分系统样式 ===== */
+
+/* 评分面板基础样式 */
+.boss-score-panel {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.boss-score-panel .panel-header {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 15px;
+  border-bottom: 2px solid #f0f0f0;
+  padding-bottom: 10px;
+}
+
+.boss-score-panel .panel-body {
+  color: #666;
+}
+
+.boss-score-panel .score-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 10px 0;
+  padding: 4px 0;
+}
+
+.boss-score-panel .score-row span:first-child {
+  flex: 1;
+}
+
+.boss-score-panel .score-row span:last-child {
+  font-weight: bold;
+  color: #1890ff;
+}
+
+.boss-score-panel .divider {
+  height: 1px;
+  background: #f0f0f0;
+  margin: 15px 0;
+}
+
+/* 加载状态 */
+.boss-score-panel .loading-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #1890ff;
+  padding: 10px;
+  background: #f0f7ff;
+  border-radius: 6px;
+}
+
+.boss-score-panel .spinner {
+  font-size: 18px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 分数变化提示 */
+.boss-score-panel .score-diff {
+  background: linear-gradient(135deg, #f6ffed 0%, #e6f7ff 100%);
+  color: #52c41a;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin: 10px 0;
+  text-align: center;
+  border-left: 3px solid #52c41a;
+}
+
+/* 信息文本 */
+.boss-score-panel .info-text {
+  font-size: 12px;
+  color: #999;
+  text-align: center;
+  margin-top: 10px;
+  padding: 8px;
+  background: #fafafa;
+  border-radius: 6px;
+}
+
+/* 面板动画 */
+@keyframes slideIn {
+  from {
+    transform: translateX(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* 响应式：小屏幕适配 */
+@media (max-width: 1280px) {
+  .boss-score-panel {
+    right: 10px !important;
+    max-width: 300px !important;
+    font-size: 13px;
+  }
+
+  .boss-score-panel .panel-header {
+    font-size: 14px;
+  }
+}
