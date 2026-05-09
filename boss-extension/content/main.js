@@ -219,29 +219,73 @@
    */
   async function scanJobs() {
     const jobs = [];
-    const jobCards = document.querySelectorAll('.job-card-wrapper, .job-card-box, li.job-card');
+
+    // 尝试多种选择器（Boss直聘页面结构可能变化）
+    const selectors = [
+      '.job-card-wrapper',
+      '.job-card-box',
+      'li.job-card',
+      '.job-list-box li',
+      '[class*="job-card"]',
+      'li[class*="job"]',
+    ];
+
+    console.log('[扫描调试] 开始尝试多种选择器...');
+    let jobCards = null;
+
+    for (const selector of selectors) {
+      const elements = document.querySelectorAll(selector);
+      console.log(`[扫描调试] 选择器 "${selector}" 找到 ${elements.length} 个元素`);
+
+      if (elements.length > 0) {
+        jobCards = elements;
+        console.log(`[扫描调试] ✓ 使用选择器: ${selector}`);
+        BossUtils.log('info', `使用选择器: ${selector}`);
+        break;
+      }
+    }
+
+    if (!jobCards || jobCards.length === 0) {
+      console.error('[扫描调试] ✗ 所有选择器都没找到职位元素');
+      console.log('[扫描调试] 页面可能的职位容器:', document.querySelectorAll('[class*="job"]'));
+
+      BossUtils.showToast('⚠ 无法识别页面结构，请刷新页面或联系开发者', 'error');
+      BossUtils.log('error', '无法识别页面职位列表结构');
+      return jobs;
+    }
+
+    console.log(`[扫描调试] 开始解析 ${jobCards.length} 个职位卡片...`);
 
     for (const card of jobCards) {
       try {
         const job = {
           id: card.getAttribute('data-jid') || card.getAttribute('data-job-id') || Math.random().toString(36),
-          title: card.querySelector('.job-title, .job-name')?.textContent.trim() || '',
-          company: card.querySelector('.company-name')?.textContent.trim() || '',
-          salary: card.querySelector('.salary, .job-salary')?.textContent.trim() || '',
-          location: card.querySelector('.job-area, .job-location')?.textContent.trim() || '',
-          tags: Array.from(card.querySelectorAll('.tag-list li, .job-tags span')).map(t => t.textContent.trim()),
-          experience: card.querySelector('.job-experience, .job-limit-experience')?.textContent.trim() || '',
+          title: card.querySelector('.job-title, .job-name, [class*="job-title"], [class*="job-name"]')?.textContent.trim() || '',
+          company: card.querySelector('.company-name, [class*="company"]')?.textContent.trim() || '',
+          salary: card.querySelector('.salary, .job-salary, [class*="salary"]')?.textContent.trim() || '',
+          location: card.querySelector('.job-area, .job-location, [class*="location"], [class*="area"]')?.textContent.trim() || '',
+          tags: Array.from(card.querySelectorAll('.tag-list li, .job-tags span, [class*="tag"] span')).map(t => t.textContent.trim()),
+          experience: card.querySelector('.job-experience, .job-limit-experience, [class*="experience"]')?.textContent.trim() || '',
           element: card,
         };
 
         if (job.title && job.company) {
           jobs.push(job);
+          console.log(`[扫描调试] ✓ 成功解析: ${job.company} - ${job.title}`);
+        } else {
+          console.warn(`[扫描调试] ✗ 跳过无效职位:`, {
+            有标题: !!job.title,
+            有公司: !!job.company,
+            元素HTML: card.innerHTML.substring(0, 100)
+          });
         }
       } catch (error) {
+        console.error('[扫描调试] 解析职位卡片失败:', error);
         BossUtils.log('warn', '解析职位卡片失败', error.message);
       }
     }
 
+    console.log(`[扫描调试] ✓ 成功解析 ${jobs.length} 个有效职位`);
     return jobs;
   }
 
