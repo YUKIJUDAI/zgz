@@ -486,6 +486,188 @@
   }
 
   /**
+   * 显示评分面板
+   * @param {object} data - { score, details, status, loading, message }
+   */
+  function showScorePanel(data) {
+    try {
+      // 移除旧面板
+      const oldPanel = document.getElementById('boss-score-panel-v2');
+      if (oldPanel) oldPanel.remove();
+
+      const panel = document.createElement('div');
+      panel.id = 'boss-score-panel-v2';
+      panel.className = 'boss-score-panel';
+
+      let html = '';
+
+      if (data.status === 'loading') {
+        // 加载中状态
+        html = `
+          <div class="panel-header">职位匹配度分析</div>
+          <div class="panel-body">
+            <div class="loading-state">
+              <span class="spinner">🔄</span>
+              <span>${data.message || '正在分析职位...'}</span>
+            </div>
+          </div>
+        `;
+      } else if (data.status === 'preliminary') {
+        // 显示初步分状态
+        html = `
+          <div class="panel-header">基础条件匹配</div>
+          <div class="panel-body">
+            <div class="score-row">
+              <span>✅ 薪资匹配</span>
+              <span>${data.details.salaryScore}/15分</span>
+            </div>
+            <div class="score-row">
+              <span>✅ 地点匹配</span>
+              <span>${data.details.locationScore}/10分</span>
+            </div>
+            ${data.loading ? `
+              <div class="divider"></div>
+              <div class="loading-state">
+                <span class="spinner">🔄</span>
+                <span>${data.message || '正在分析技能匹配...'}</span>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      } else if (data.status === 'accurate') {
+        // 显示精确分状态
+        const scoreColor = data.newScore >= 80 ? '#52c41a' :
+                          data.newScore >= 60 ? '#1890ff' :
+                          data.newScore >= 40 ? '#faad14' : '#d9d9d9';
+
+        const diffText = data.oldScore && data.showDiff
+          ? `<div class="score-diff">
+              ${data.newScore > data.oldScore ? '⬆️' : data.newScore < data.oldScore ? '⬇️' : ''}
+              ${data.newScore > data.oldScore ? '+' : data.newScore < data.oldScore ? '' : ''}${data.newScore - data.oldScore}分
+              （初步分：${data.oldScore}分）
+            </div>`
+          : '';
+
+        html = `
+          <div class="panel-header">
+            匹配度：<span style="color: ${scoreColor}; font-size: 24px; font-weight: bold;">
+              ${data.newScore}分
+            </span>（精确）✨
+          </div>
+          ${diffText}
+          <div class="panel-body">
+            <div class="score-row">
+              <span>技能匹配 🆕</span>
+              <span>${data.details.skillScore || 0}/50分</span>
+            </div>
+            <div class="score-row">
+              <span>加分技能 🆕</span>
+              <span>${data.details.bonusScore || 0}/20分</span>
+            </div>
+            <div class="score-row">
+              <span>薪资匹配</span>
+              <span>${data.details.salaryScore || 0}/15分</span>
+            </div>
+            <div class="score-row">
+              <span>地点匹配</span>
+              <span>${data.details.locationScore || 0}/10分</span>
+            </div>
+            <div class="score-row">
+              <span>标题匹配 🆕</span>
+              <span>${data.details.titleScore || 0}/5分</span>
+            </div>
+            <div class="divider"></div>
+            <div class="info-text">💡 基于完整JD分析</div>
+          </div>
+        `;
+      } else if (data.status === 'error' || data.status === 'warning') {
+        // 错误或警告状态
+        html = `
+          <div class="panel-header">
+            ${data.status === 'error' ? '❌' : '⚠️'} 分析失败
+          </div>
+          <div class="panel-body">
+            <div class="info-text">${data.message}</div>
+            ${data.score !== undefined ? `
+              <div class="divider"></div>
+              <div class="score-row">
+                <span>基础评分</span>
+                <span>${data.score}/25分</span>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }
+
+      panel.innerHTML = html;
+      panel.style.cssText = `
+        position: fixed;
+        top: 100px;
+        right: 20px;
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        z-index: 9999;
+        min-width: 280px;
+        max-width: 350px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        animation: slideIn 0.5s ease;
+      `;
+
+      document.body.appendChild(panel);
+    } catch (error) {
+      console.error('[UI] 评分面板渲染失败:', error);
+      BossUtils.log('error', '评分面板渲染失败', error.message);
+
+      // 降级：使用toast显示
+      const score = data.score || data.newScore || 0;
+      BossUtils.showToast(`匹配度：${score}分`, 'info');
+    }
+  }
+
+  /**
+   * 更新评分面板（带动画）
+   * @param {object} data - 新的评分数据
+   */
+  function updateScorePanel(data) {
+    const panel = document.getElementById('boss-score-panel-v2');
+
+    if (panel) {
+      // 先淡出
+      panel.style.transition = 'opacity 0.3s';
+      panel.style.opacity = '0';
+
+      setTimeout(() => {
+        showScorePanel(data);
+        // 淡入
+        const newPanel = document.getElementById('boss-score-panel-v2');
+        if (newPanel) {
+          newPanel.style.opacity = '0';
+          setTimeout(() => {
+            newPanel.style.transition = 'opacity 0.5s';
+            newPanel.style.opacity = '1';
+          }, 50);
+        }
+      }, 300);
+    } else {
+      showScorePanel(data);
+    }
+  }
+
+  /**
+   * 显示分数变化提示
+   * @param {number} diff - 分数差异
+   */
+  function showScoreDiffToast(diff) {
+    const message = diff > 0
+      ? `✨ 精确分析后提升了 ${diff} 分！`
+      : `📉 精确分析后降低了 ${Math.abs(diff)} 分`;
+
+    BossUtils.showToast(message, diff > 0 ? 'success' : 'info');
+  }
+
+  /**
    * 处理聊天页面
    */
   async function handleChatPage() {
