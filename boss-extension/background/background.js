@@ -239,35 +239,15 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
  * 监听存储变化
  */
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  console.log('[Boss助手诊断-BG] Storage 变化事件触发', {
-    areaName,
-    changedKeys: Object.keys(changes),
-    time: new Date().toISOString()
-  });
-
   if (areaName === 'local') {
     for (const [key, { oldValue, newValue }] of Object.entries(changes)) {
-      console.log(`[Boss助手诊断-BG] 存储已更新: ${key}`, {
-        hasOldValue: !!oldValue,
-        hasNewValue: !!newValue,
-        oldEnabled: oldValue?.enabled,
-        newEnabled: newValue?.enabled
-      });
+      console.log(`存储已更新: ${key}`, { oldValue, newValue });
 
       // 如果配置更新，通知所有标签页刷新配置
       if (key === 'bossConfig') {
-        console.log('[Boss助手诊断-BG] ⚠ bossConfig 变化，查询所有 Boss 标签页');
         chrome.tabs.query({ url: 'https://www.zhipin.com/*' }, (tabs) => {
-          console.log(`[Boss助手诊断-BG] 找到 ${tabs.length} 个 Boss 标签页，准备发送 refreshConfig`);
-          tabs.forEach((tab, index) => {
-            console.log(`[Boss助手诊断-BG] 向标签页 ${index + 1}/${tabs.length} (ID: ${tab.id}) 发送 refreshConfig`);
-            chrome.tabs.sendMessage(tab.id, { action: 'refreshConfig' }, (response) => {
-              if (chrome.runtime.lastError) {
-                console.error(`[Boss助手诊断-BG] 向标签页 ${tab.id} 发送消息失败:`, chrome.runtime.lastError.message);
-              } else {
-                console.log(`[Boss助手诊断-BG] 标签页 ${tab.id} 响应:`, response);
-              }
-            });
+          tabs.forEach(tab => {
+            chrome.tabs.sendMessage(tab.id, { action: 'refreshConfig' });
           });
         });
       }

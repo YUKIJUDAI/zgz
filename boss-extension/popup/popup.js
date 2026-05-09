@@ -7,21 +7,12 @@ let isInitializing = true;  // 防止初始化时触发change事件保存
 
 // 页面加载完成
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('[Boss助手诊断-Popup] DOMContentLoaded 事件触发');
-  console.log('[Boss助手诊断-Popup] 开始加载配置');
   await loadConfig();
-  console.log('[Boss助手诊断-Popup] 开始加载统计');
   await loadStats();
-  console.log('[Boss助手诊断-Popup] 初始化事件监听器');
   initEventListeners();
-  console.log('[Boss助手诊断-Popup] 初始化标签切换');
   initTabSwitching();
   // 初始化完成后，允许保存配置
-  console.log('[Boss助手诊断-Popup] 100ms 后将允许保存配置');
-  setTimeout(() => {
-    isInitializing = false;
-    console.log('[Boss助手诊断-Popup] ✓ 初始化完成，现在允许保存配置');
-  }, 100);
+  setTimeout(() => { isInitializing = false; }, 100);
 });
 
 /**
@@ -147,21 +138,9 @@ async function loadStats() {
 function initEventListeners() {
   // 启用/禁用开关
   document.getElementById('enableSwitch').addEventListener('change', async (e) => {
-    console.log('[Boss助手诊断-Popup] enableSwitch change 事件触发', {
-      checked: e.target.checked,
-      isInitializing,
-      time: new Date().toISOString()
-    });
-
-    if (isInitializing) {
-      console.log('[Boss助手诊断-Popup] 正在初始化中，忽略此次 change 事件');
-      return;  // 初始化阶段不保存
-    }
-
-    console.log('[Boss助手诊断-Popup] ⚠ 将更新 storage，这会触发 background 的 onChanged 监听器');
+    if (isInitializing) return;  // 初始化阶段不保存
     config.enabled = e.target.checked;
     await chrome.storage.local.set({ bossConfig: config });
-    console.log('[Boss助手诊断-Popup] ✓ Storage 更新完成');
     showToast(config.enabled ? '助手已启用' : '助手已禁用', 'info');
   });
 
