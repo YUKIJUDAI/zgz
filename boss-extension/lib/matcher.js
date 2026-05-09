@@ -236,6 +236,51 @@ const JobMatcher = {
   },
 
   /**
+   * 列表页初步评分（仅薪资+地点）
+   * @param {Object} jobInfo - 职位信息
+   * @param {Object} config - 用户配置
+   * @returns {Object} { passed, score, details, type }
+   */
+  matchPreliminary(jobInfo, config) {
+    const details = {};
+    let score = 0;
+    const scoringConfig = this.getScoringConfig();
+
+    // 1. 薪资匹配（15分）
+    const salaryScore = this.scoreSalary(
+      jobInfo,
+      config,
+      15,  // 初步评分中薪资占15分
+      scoringConfig.salary
+    );
+    score += salaryScore;
+    details.salaryScore = Math.round(salaryScore);
+
+    // 2. 地点匹配（10分）
+    const locationScore = this.scoreLocation(
+      jobInfo,
+      config,
+      10  // 初步评分中地点占10分
+    );
+    score += locationScore;
+    details.locationScore = Math.round(locationScore);
+
+    // 不包含技能、加分、标题评分
+
+    score = Math.round(score);
+    score = Math.min(25, Math.max(0, score));
+
+    const passed = score >= 15;  // 至少15分才算通过初筛
+
+    return {
+      passed,
+      score,
+      details,
+      type: 'preliminary'
+    };
+  },
+
+  /**
    * 批量匹配职位列表
    */
   async matchBatch(jobs, config) {
